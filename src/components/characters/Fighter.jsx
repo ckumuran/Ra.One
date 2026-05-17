@@ -2,39 +2,36 @@ import { Capsule } from "@react-three/drei";
 
 import { useFrame } from "@react-three/fiber";
 
-import { useRef } from "react";
+import { forwardRef } from "react";
 
 import keys from "../../game/controls";
 
-export default function Fighter() {
-
-  const fighterRef = useRef();
+const Fighter = forwardRef(function Fighter(props, ref) {
 
   useFrame(() => {
 
-    if (!fighterRef.current) return;
+    if (!ref.current) return;
 
-    // Movement speed
     const speed = 0.1;
 
     // Forward
     if (keys["w"]) {
-      fighterRef.current.position.z -= speed;
+      ref.current.position.z -= speed;
     }
 
     // Backward
     if (keys["s"]) {
-      fighterRef.current.position.z += speed;
+      ref.current.position.z += speed;
     }
 
     // Left
     if (keys["a"]) {
-      fighterRef.current.position.x -= speed;
+      ref.current.position.x -= speed;
     }
 
     // Right
     if (keys["d"]) {
-      fighterRef.current.position.x += speed;
+      ref.current.position.x += speed;
     }
 
   });
@@ -42,7 +39,7 @@ export default function Fighter() {
   return (
 
     <Capsule
-      ref={fighterRef}
+      ref={ref}
       args={[0.5, 1.5, 8, 16]}
       position={[0, 1, 0]}
     >
@@ -51,4 +48,6 @@ export default function Fighter() {
 
     </Capsule>
   );
-}
+});
+
+export default Fighter;
