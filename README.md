@@ -2,15 +2,6 @@
 
 <div align="center">
 
-```
- ██████╗       ██████╗ ███╗   ██╗███████╗
-██╔════╝      ██╔═══██╗████╗  ██║██╔════╝
-██║  ███╗     ██║   ██║██╔██╗ ██║█████╗  
-██║   ██║     ██║   ██║██║╚██╗██║██╔══╝  
-╚██████╔╝     ╚██████╔╝██║ ╚████║███████╗
- ╚═════╝       ╚═════╝ ╚═╝  ╚═══╝╚══════╝
-```
-
 **A stylized, wave-based 3D combat game built with React Three Fiber.**  
 **Inspired by PS3-era arcade fighters. Runs in your browser. Exports to Android.**
 
