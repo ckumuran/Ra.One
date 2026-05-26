@@ -10,6 +10,8 @@ public class EnemyAI : MonoBehaviour
 
     public EnemyFlash flashEffect;
 
+    public EnemyStagger stagger;
+
     private int currentHealth;
 
     private Transform player;
@@ -32,6 +34,11 @@ public class EnemyAI : MonoBehaviour
     void Update()
     {
         if (dead) return;
+
+        if (stagger != null && stagger.isStaggered)
+        {
+            return;
+        }
 
         if (player == null) return;
 
@@ -72,9 +79,19 @@ public class EnemyAI : MonoBehaviour
             flashEffect.Flash();
         }
 
+        if (stagger != null)
+        {
+            stagger.Stagger();
+        }
+
         if (CameraShake.Instance != null)
         {
             CameraShake.Instance.Shake(0.1f, 0.15f);
+        }
+
+        if (HitStop.Instance != null)
+        {
+            HitStop.Instance.Stop(0.06f);
         }
 
         if (currentHealth <= 0)
