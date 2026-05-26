@@ -1275,11 +1275,4 @@ The current architecture was intentionally designed to allow these systems to sl
 
 ---
 
-# ScreenShots
-
-./ScreenShots/MainG.One.png
-./ScreenShots/Action.png
-./ScreenShots/Start.png
----
-
 Built by C.Kumaran
