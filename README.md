@@ -1,724 +1,1293 @@
-<div align="center">
+# Engineering G.ONE — Building a Stylized Combat Framework in Unity
 
-# G.ONE — The Game
+> A technical breakdown of the architecture, combat systems, rendering decisions, optimization strategies, and gameplay engineering behind G.ONE — a stylized Unity combat project inspired by PS3-era arcade action games.
 
-**A stylized, wave-based 3D combat game built with React Three Fiber.**  
-**Inspired by PS3-era arcade fighters. Runs in your browser. Exports to Android.**
-
-![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
-![Three.js](https://img.shields.io/badge/Three.js-r158-000000?style=flat-square&logo=threedotjs)
-![R3F](https://img.shields.io/badge/React_Three_Fiber-8-FF6B6B?style=flat-square)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite)
-![Android](https://img.shields.io/badge/Android-Ready-3DDC84?style=flat-square&logo=android)
-
-<br/>
-
-![G.ONE Main Menu](./ScreenShots/MainG.One.png)
-
-</div>
-
----
+Built in Unity using C# with a fully modular combat-driven architecture focused on responsive gameplay systems, mobile deployment, and stylized arcade combat.
 
 ## The Idea
 
-G.ONE — The Game is a **wave-based 3D combat game** where you fight through increasingly brutal enemy waves. The game is built entirely in React + Three.js, ships as a PWA, and can be packaged as an Android APK with Capacitor.
+G.ONE began as a browser combat prototype and gradually evolved into a lightweight combat-engine architecture experiment.
+
+The project focuses less on cinematic realism and more on gameplay readability, responsiveness, frame consistency, combat feedback, and scalable gameplay architecture inside Unity.
+
+The design target was very specific:
+
+* Fast arcade combat
+* Aggressive visual readability
+* Minimal latency input feel
+* Heavy impact perception
+* Mobile compatibility
+* Modular combat architecture
+* PS3-era stylized rendering aesthetics
+
+Instead of attempting to simulate realism, the game intentionally exaggerates combat timing, screen-space effects, movement acceleration, and hit feedback.
+
+This project was heavily inspired by the design language of older console action games where:
+
+* effects were exaggerated
+* animation timing mattered more than realism
+* environments were atmospheric instead of photorealistic
+* combat readability was prioritized over visual noise
+
+The result is a custom combat framework disguised as a small arcade game.
 
 ---
 
-## Gameplay Overview
+# Why I Built It This Way
 
-Each level of fighting is harder than the last. Enemies get faster, smarter, and more aggressive. Survive long enough and **Ra.One** spawns — complete with a rage mode that kicks in when its HP drops below 40%.
+Most small action-game projects collapse into giant gameplay scripts extremely quickly.
 
-### The Loop
+Combat logic, enemy AI, camera behavior, effects, UI, and rendering all slowly fuse together into a single unmaintainable update loop.
 
+I wanted to avoid that entirely.
+
+So the project was built around one core principle:
+
+> Separate gameplay systems aggressively.
+
+Almost every major gameplay feature exists as an isolated module:
+
+```txt
+Input Layer
+    ↓
+Player State Machine
+    ↓
+Combat Systems
+    ↓
+Event Dispatch
+    ↓
+VFX Systems
+    ↓
+Camera Response
+    ↓
+HUD/UI Response
 ```
-[Main Menu] → [Wave 1: Basic Enemies] → [Wave 2: Faster + Ranged] 
-    → [Wave 3: Shield Enemies] → [BOSS WAVE] → [Score] → [Repeat]
-```
 
-### The Arena
+This separation prevents gameplay logic from collapsing into monolithic components.
 
-![G.ONE Arena — Enemy Encounter](./ScreenShots/Start.png)
+The architecture intentionally avoids:
 
-### What You Can Do
+* giant update loops
+* tightly coupled combat logic
+* global mutable state
+* mixed UI/rendering responsibilities
+* physics-engine dependency lock-in
 
-| Action | Input (Mobile) | Input (Desktop) |
-|---|---|---|
-| Move | Left Virtual Joystick | WASD / Arrow Keys |
-| Light Attack | Tap Attack Button | J |
-| Heavy Attack | Hold Attack Button | K |
-| Energy Blast | Blast Button | L |
-| Dash | Double-tap Direction | Shift |
-| Lock-On | Lock Button | Tab |
-| Finisher | Finisher Button (when charged) | F |
-| Pause | Pause Button | Esc |
+Instead, systems communicate through:
 
-### The Combat Feel
+* state transitions
+* event triggers
+* isolated update responsibilities
+* data-driven configuration
 
-Every hit triggers a **2–4 frame hit-stop** — the entire game freezes for a fraction of a second. This single technique makes combat feel 10x heavier than it actually is. Combined with screen shake, bloom flash on energy blasts, and dash trails.
+This makes iteration significantly faster.
 
-![G.ONE Combat — Energy Blast on Enemy](./ScreenShots/Action.png)
-> *Live combat: energy blast connecting mid-fight. Blue bloom burst, health bars active, all 6 mobile buttons visible — BLAST, DASH, ATTACK, SLAM, LOCK ON, BLOCK.*
+For example:
+
+* new VFX can be added without touching combat code
+* enemy archetypes can be introduced without modifying the renderer
+* wave behavior can be changed entirely from config objects
+* mobile UI can evolve independently from gameplay logic
+
+The goal was not just to "make a game work."
+
+The goal was to engineer a reusable combat foundation.
 
 ---
 
-## PS3-Era Visual Inspiration
+# Gameplay Overview
 
-- Deep blacks with bright bloom highlights
-- Neon outlines on geometry
-- Particle explosions that feel *chunky*
-- Arena stages that were simple but atmospheric
+Each wave escalates combat pressure through enemy composition, attack density, movement aggression, and spatial control.
 
-This game chases that exact feeling. The arena is intentionally **low-poly**. The lighting is **colored and dramatic**, not realistic.
+```txt
+[MAIN MENU]
+      ↓
+[WAVE 1 — BASIC ENEMIES]
+      ↓
+[WAVE 2 — FASTER + RANGED]
+      ↓
+[WAVE 3 — SHIELD ENEMIES]
+      ↓
+[MINI SWARM PHASE]
+      ↓
+[RA.ONE BOSS ENCOUNTER]
+      ↓
+[SCORE + RANK]
+      ↓
+[RESTART LOOP]
+```
 
-Post-processing does the heavy lifting:
-- **Bloom** makes energy attacks glow
-- **Chromatic aberration** pulses on heavy hits
-- **Vignette** keeps the focus center-stage
+Combat pacing intentionally ramps non-linearly.
+
+Early waves teach:
+
+* movement
+* spacing
+* lock-on behavior
+* projectile timing
+
+Later waves stress:
+
+* crowd control
+* movement commitment
+* target prioritization
+* animation recovery windows
+* camera awareness
+
+Boss encounters shift the combat rhythm entirely.
+
+Instead of increasing raw HP only, the boss alters:
+
+* attack cadence
+* projectile density
+* movement aggression
+* screen-space pressure
+* VFX intensity
+* camera pacing
+
+This creates perceived escalation without requiring massive content volume.
 
 ---
 
-## 🛠️ Tech Stack
+# The Arena
 
-| Layer | Technology | Why |
-|---|---|---|
-| Framework | React 18 | Component-based game systems |
-| 3D Engine | Three.js r158 | WebGL rendering |
-| React Bridge | React Three Fiber (R3F) | Declarative Three.js |
-| Post-Processing | `@react-three/postprocessing` | Bloom, chromatic aberration |
-| Physics (light) | Custom collision detection | No heavy physics lib needed |
-| UI | React DOM (overlay) | HUD, menus, mobile controls |
-| Audio | Web Audio API + Howler.js | Sound effects + BGM |
-| Build Tool | Vite 5 | Fast HMR, optimized builds |
-| Android | Capacitor | PWA → Native APK |
-| Asset Loading | Three.js GLTFLoader | GLB/GLTF models |
+The arena was intentionally designed with low geometric complexity.
 
-### Why React Three Fiber (not plain Three.js)?
+This decision was made for multiple reasons:
 
-Plain Three.js means manually managing scene graphs, object lifecycles, and update loops. R3F makes every 3D object a React component — so `Fighter.jsx`, `Enemy.jsx`, `Arena.jsx` all follow the same component lifecycle you already know.
+## 1. Gameplay Readability
 
-```jsx
-// Without R3F (plain Three.js)
-const mesh = new THREE.Mesh(geometry, material);
-scene.add(mesh);
-// Remember to remove it on cleanup...
-// Remember to update it in the animation loop...
+A simplified environment ensures:
 
-// With React Three Fiber
-<mesh ref={meshRef} position={[0, 0, 0]}>
-  <boxGeometry args={[1, 2, 1]} />
-  <meshStandardMaterial color="cyan" />
-</mesh>
-// Lifecycle handled by React. Clean. Declarative.
-```
+* enemy silhouettes remain visible
+* energy attacks remain readable
+* bloom does not visually drown gameplay
+* combat spacing stays clear
 
-This is why the entire game can be composed like a UI app, not a traditional game engine.
+## 2. GPU Stability on Mobile
+
+Dense geometry in mobile mobile GPU environments introduces:
+
+* fill-rate instability
+* fragment overload
+* memory pressure
+* shader compilation spikes
+
+The arena instead relies on:
+
+* emissive materials
+* contrast lighting
+* bloom layering
+* fog shaping
+* post-processing
+
+rather than raw polygon density.
+
+## 3. Combat Framing
+
+The environment acts as a stage.
+
+Not a simulation.
+
+The arena exists to frame combat silhouettes and energy attacks.
+
+This is heavily inspired by PS3-era combat arenas where environmental simplicity amplified gameplay readability.
 
 ---
 
-## Combat System Breakdown
+# Building the Combat Architecture
 
-The combat system lives in **`src/components/combat/`** and is triggered by the player input layer in **`src/game/controls.js`**.
+One of the earliest architectural decisions was separating gameplay simulation from presentation.
 
-### Architecture
+A hit should still register correctly regardless of:
 
-```
-controls.js (input detection)
+* camera shake
+* post-processing
+* VFX load
+* framerate fluctuations
+* UI state
+
+That meant the combat layer had to remain isolated from presentation systems.
+
+```txt
+controls.js
     ↓
-Fighter.jsx (player state machine)
+Player FSM
     ↓
-EnergyBlast.jsx / EnemyProjectile.jsx (projectile spawning)
+Attack Validation
     ↓
-effects/ (VFX triggered on hit/fire)
+Collision Resolution
     ↓
-HUD.jsx (health/energy display update)
+Damage Pipeline
+    ↓
+Event Dispatch
+    ↓
+VFX / Camera / Audio Responses
 ```
 
-### Player State Machine
+This means combat logic remains deterministic even if rendering quality changes.
 
-The fighter is never in two states at once. This prevents animation blending bugs and makes the game feel snappy.
+The combat layer does not care about:
 
+* bloom
+* particles
+* camera shake
+* audio
+* HUD state
+
+It only cares about:
+
+* state transitions
+* attack windows
+* hit confirmation
+* damage application
+* invulnerability timing
+
+Everything else is reactive.
+
+---
+
+# What You Can Do
+
+| Action       | Mobile               | Desktop           |
+| ------------ | -------------------- | ----------------- |
+| Move         | Virtual Joystick     | WASD / Arrow Keys |
+| Light Attack | Attack Button        | J                 |
+| Heavy Attack | Heavy Button         | K                 |
+| Energy Blast | Blast Button         | L                 |
+| Dash         | Double-Tap Direction | Shift             |
+| Lock-On      | Lock Button          | Tab               |
+| Finisher     | Finisher Button      | F                 |
+| Pause        | Pause Button         | Esc               |
+
+---
+
+# Combat Feel Philosophy
+
+The combat system prioritizes *perceived impact* over physical realism.
+
+Most of the perceived weight comes from:
+
+* hit-stop
+* screen shake
+* camera framing
+* bloom pulses
+* timing pauses
+* animation interruption
+* audio synchronization
+
+The project intentionally uses exaggerated timing manipulation.
+
+A hit that freezes the world for 3 frames feels dramatically heavier than one with realistic physics but no timing emphasis.
+
+Live combat sequence — energy projectile impact during active combat loop.
+
+The visual stack intentionally combines:
+
+* bloom flashes
+* trauma-based camera displacement
+* emissive spikes
+* hit-stop
+* attack freeze frames
+* HUD feedback
+
+This layered feedback stack creates combat heaviness without requiring advanced animation systems.
+
+---
+
+# PS3-Era Visual Direction
+
+The rendering direction intentionally avoids modern photorealism.
+
+Instead, the visual language follows:
+
+* deep contrast
+* exaggerated bloom
+* emissive neon edges
+* aggressive post-processing
+* atmospheric darkness
+* arcade readability
+
+The project deliberately recreates the feeling of:
+
+* older console combat arenas
+* stylized energy attacks
+* bloom-heavy action games
+* cinematic arcade fighters
+
+Post-processing performs most of the visual lifting.
+
+```txt
+Scene Render
+    ↓
+HDR Buffer
+    ↓
+Bloom Extraction
+    ↓
+Chromatic Aberration
+    ↓
+Vignette Pass
+    ↓
+Final Composite
 ```
-IDLE → MOVING → ATTACKING → (hit registers) → HIT_STOP → IDLE
-              ↘ DASHING ↗
-              ↘ FINISHER → FINISHER_FLASH → IDLE
+
+This allows the actual geometry to remain lightweight while preserving visual intensity.
+
+---
+
+# Engine + Technology Stack
+
+| Layer             | Technology                   | Purpose                                                 |
+| ----------------- | ---------------------------- | ------------------------------------------------------- |
+| Engine            | Unity                        | Core rendering, gameplay framework, scene orchestration |
+| Language          | C#                           | Gameplay systems, combat logic, AI, rendering tools     |
+| Data Architecture | ScriptableObjects            | Data-driven enemy/wave/combat configuration             |
+| Rendering         | Unity URP                    | Stylized post-processing and neon lighting              |
+| Mobile Deployment | Android APK Pipeline         | Native Android builds                                   |
+| Audio             | Unity Audio System           | Combat feedback + layered SFX                           |
+| UI                | Unity Canvas UI              | HUD, mobile controls, overlays                          |
+| Optimization      | Object Pooling + LOD Systems | Stable combat performance                               |
+
+---|---|---|
+| Framework | Unity 18 | Component-driven gameplay architecture |
+| Renderer | Unity Rendering Pipeline r158 | mobile GPU rendering pipeline |
+| Scene Bridge | Unity Three Fiber | Declarative rendering + lifecycle control |
+| Effects | @react-three/postprocessing | Screen-space visual stack |
+| UI | Unity Canvas UI | Decoupled UI rendering |
+| Audio | Howler.js + Web Audio API | Lightweight audio management |
+| Build System | Vite 5 | Fast iteration and optimized production builds |
+| Mobile Packaging | Capacitor | Native Android deployment |
+| Asset Pipeline | GLTF + Draco | Reduced mobile asset cost |
+| Collision | Custom math-based system | Deterministic lightweight combat |
+
+---
+
+# Why Unity Was Chosen
+
+The project was built entirely in Unity because the engine provides an ideal balance between:
+
+* rapid gameplay iteration
+* modular scene architecture
+* mobile deployment support
+* rendering flexibility
+* scalable combat systems
+
+Unity allowed the project to evolve from a small combat prototype into a larger gameplay architecture experiment.
+
+The engine's component-based workflow made it possible to aggressively separate systems:
+
+```txt
+Combat Logic
+    ↓
+AI Systems
+    ↓
+Rendering
+    ↓
+UI
+    ↓
+VFX
 ```
 
-### Hit Detection
+This separation was critical for maintaining clean architecture as the combat systems became more complex.
 
-Hit detection is **sphere-based** — each character has an attack sphere and a hitbox sphere. On overlap, damage is calculated:
+Unity also enabled:
+
+* Android deployment pipelines
+* custom rendering control
+* ScriptableObject-driven design
+* modular gameplay composition
+* scalable combat iteration
+
+The project intentionally avoids relying heavily on premade gameplay frameworks.
+
+Most gameplay systems were engineered manually in C#.
+
+---
+
+# Combat State Machine
+
+The player controller is built around a finite-state machine.
+
+```txt
+IDLE
+  ↓
+MOVING
+  ↓
+ATTACKING
+  ↓
+RECOVERY
+  ↓
+IDLE
+```
+
+Additional branches:
+
+```txt
+MOVING → DASHING
+MOVING → LOCK_ON
+ATTACKING → HIT_STOP
+ATTACKING → FINISHER
+FINISHER → CINEMATIC_FLASH
+```
+
+FSMs were chosen because they provide:
+
+* deterministic transitions
+* predictable combat timing
+* animation consistency
+* interruption control
+* reduced state ambiguity
+
+Without FSM constraints, combat systems often suffer from:
+
+* blended animation corruption
+* overlapping attack states
+* invalid movement behavior
+* timing inconsistencies
+
+The FSM guarantees:
+
+> the player can never exist in multiple incompatible gameplay states simultaneously.
+
+That alone dramatically improves combat responsiveness.
+
+---
+
+# FSM AI Breakdown
+
+Enemy AI is also built as a finite-state machine.
+
+This was a deliberate choice.
+
+Behavior trees were unnecessary for the scale of gameplay.
+
+FSMs provide:
+
+* lower overhead
+* easier debugging
+* deterministic combat pacing
+* highly readable enemy behavior
+
+```txt
+PATROL
+   ↓
+CHASE
+   ↓
+ATTACK
+   ↓
+RECOVER
+   ↓
+REPOSITION
+```
+
+Boss states extend the graph:
+
+```txt
+ATTACK
+   ↓
+RAGE_TRIGGER
+   ↓
+RAGE_LOOP
+   ↓
+PROJECTILE_BARRAGE
+```
+
+The AI pipeline intentionally prioritizes:
+
+* responsiveness
+* readability
+* aggression pacing
+
+rather than advanced navigation simulation.
+
+This keeps combat tight and arcade-focused.
+
+---
+
+# Designing the Lock-On Camera
+
+The camera system is one of the most important gameplay systems in the project.
+
+A weak lock-on system destroys melee readability.
+
+The camera architecture separates:
+
+* free movement camera
+* target framing
+* combat centering
+* trauma displacement
+* cinematic transitions
+
+```txt
+Player Position
+        +
+Target Position
+        ↓
+Midpoint Solver
+        ↓
+Spring Damped Camera
+        ↓
+Look Target Resolution
+```
+
+The lock-on system dynamically frames:
+
+* player silhouette
+* enemy silhouette
+* projectile readability
+* dodge spacing
+
+This dramatically improves combat clarity during crowded encounters.
+
+The camera intentionally uses spring damping rather than hard snapping.
+
+Hard snapping feels robotic.
+
+Damped interpolation preserves cinematic motion.
+
+---
+
+# Building an Event-Driven Gameplay Pipeline
+
+Gameplay systems communicate through lightweight event-style triggers.
+
+```txt
+Attack Lands
+    ↓
+Dispatch Combat Event
+    ↓
+Trigger:
+    - HitStop
+    - ScreenShake
+    - Audio
+    - Damage Numbers
+    - HUD Flash
+```
+
+This separation prevents systems from directly depending on each other.
+
+For example:
+
+Combat logic does NOT know how screen shake works.
+
+It simply dispatches:
 
 ```js
-// Simplified hit logic inside Fighter.jsx
-const attackSphere = new THREE.Sphere(attackOrigin, ATTACK_RADIUS);
-const enemyHitbox  = new THREE.Sphere(enemy.position, ENEMY_HITBOX_RADIUS);
-
-if (attackSphere.intersectsSphere(enemyHitbox)) {
-  triggerHitStop(HIT_STOP_FRAMES);
-  triggerScreenShake(0.4);
-  enemy.takeDamage(playerAttackDamage);
-}
+emit('HEAVY_HIT', payload)
 ```
 
-No physics engine. No rigid body simulation. Just pure math.
+The camera system independently reacts.
 
-### Energy Blast (`EnergyBlast.jsx`)
+This architecture improves:
 
-Energy blasts are **pooled projectile objects**. On fire:
-1. A projectile spawns at the player's hand position
-2. It travels along a forward vector each frame
-3. On collision with an enemy hitbox → explosion, damage, `ExplosionEffect.jsx` spawns
-4. If it misses the arena bounds → despawn
-
-```jsx
-// EnergyBlast.jsx — movement per frame
-useFrame((_, delta) => {
-  if (!active) return;
-  meshRef.current.position.addScaledVector(direction, BLAST_SPEED * delta);
-  checkCollisions();
-  checkBoundsExpiry();
-});
-```
+* modularity
+* scalability
+* debuggability
+* feature iteration speed
 
 ---
 
-## Enemy AI System
+# Why Object Pooling Became Mandatory
 
-Enemy AI lives in **`src/components/characters/Enemy.jsx`**.
+One of the most important optimization systems in the project is object pooling.
 
-It is a **Finite State Machine (FSM)** — the simplest AI that actually works well for arcade games.
+Projectile-heavy gameplay can destroy browser performance if objects are constantly allocated and destroyed.
 
-### States
+Without pooling:
 
-```
-PATROL → (player in range) → CHASE → (attack range) → ATTACK
-                                         ↓
-                                    (takes damage) → STAGGER
-                                         ↓
-                                    (HP < 40%) → RAGE (boss only)
-```
-
-### State Logic (Simplified)
-
-```js
-// Enemy.jsx — FSM tick
-function updateAI(delta) {
-  switch (state) {
-    case 'PATROL':
-      moveToWaypoint(delta);
-      if (distToPlayer < DETECTION_RADIUS) setState('CHASE');
-      break;
-
-    case 'CHASE':
-      moveToward(playerPosition, CHASE_SPEED * delta);
-      if (distToPlayer < ATTACK_RADIUS) setState('ATTACK');
-      break;
-
-    case 'ATTACK':
-      if (attackCooldown <= 0) {
-        fireProjectile();  // spawns EnemyProjectile.jsx
-        attackCooldown = BASE_COOLDOWN;
-      }
-      break;
-
-    case 'RAGE':           // boss only — faster, more projectiles
-      attackCooldown = BASE_COOLDOWN * 0.5;
-      moveToward(playerPosition, CHASE_SPEED * 1.8 * delta);
-      break;
-  }
-}
+```txt
+Spawn Projectile
+    ↓
+Allocate Memory
+    ↓
+Garbage Collection
+    ↓
+Frame Spike
 ```
 
-### Boss Rage Mode
+With pooling:
 
-When the boss HP drops below **40%**, the FSM hard-switches to `RAGE`:
-- Movement speed × 1.8
-- Attack cooldown halved
-- Projectile spread increases
-- Visual: boss material shifts to red emissive, `ScreenShake` pulses
-
-This single trigger completely changes how the fight feels — without any new animation or model.
-
-### Wave Spawning (`FightScene.jsx`)
-
-Waves are defined as config objects. `FightScene.jsx` reads the current wave index and spawns enemies accordingly:
-
-```js
-const WAVES = [
-  { count: 3, type: 'basic',  speed: 1.0, hasBoss: false },
-  { count: 5, type: 'ranged', speed: 1.2, hasBoss: false },
-  { count: 4, type: 'shield', speed: 1.0, hasBoss: false },
-  { count: 2, type: 'ranged', speed: 1.5, hasBoss: true  },
-];
+```txt
+Reuse Existing Object
+    ↓
+Reset State
+    ↓
+Unityivate
 ```
 
-When all enemies in a wave are defeated, a short delay triggers the next wave — with a HUD announcement.
+The pooling layer is used for:
+
+* energy blasts
+* enemy projectiles
+* explosions
+* shockwaves
+* damage effects
+* temporary particles
+
+This significantly reduces:
+
+* garbage collection spikes
+* memory churn
+* mobile frame instability
+
+Object pooling is especially critical on Android WebViews where memory pressure becomes extremely visible.
 
 ---
 
-## VFX Pipeline
+# Rendering Pipeline Breakdown
 
-The effects system lives in **`src/components/effects/`**.
-
-Every effect is a **self-contained, self-destructing component**. You render it, it plays, it removes itself. No global effect manager needed.
-
+```txt
+Unity Three Fiber Canvas
+    ↓
+Scene Graph Construction
+    ↓
+Geometry + Material Submission
+    ↓
+Lighting Pass
+    ↓
+Transparent Objects
+    ↓
+Post-Processing Stack
+    ↓
+Unity Canvas UI HUD Overlay
 ```
+
+The rendering architecture intentionally separates:
+
+## World Rendering
+
+Handled through Unity Rendering Pipeline/Unity Component System.
+
+## UI Rendering
+
+Handled through Unity Canvas UI.
+
+This separation was critical.
+
+---
+
+# Why Unity Canvas UI Was Used For UI
+
+Rendering UI directly inside Unity Rendering Pipeline creates unnecessary complexity.
+
+Unity Rendering Pipeline is optimized for:
+
+* meshes
+* transforms
+* shaders
+* scene rendering
+
+Not:
+
+* menus
+* accessibility
+* responsive layouts
+* mobile interaction layers
+
+Using Unity Canvas UI for HUD/UI introduces major advantages:
+
+## Accessibility
+
+Standard HTML remains accessible.
+
+## Mobile Responsiveness
+
+CSS handles scaling naturally.
+
+## Lower GPU Cost
+
+UI does not consume mobile GPU draw calls.
+
+## Easier Animation
+
+CSS transitions outperform shader-based UI for simple overlays.
+
+## Better Separation of Concerns
+
+Gameplay rendering and interface rendering evolve independently.
+
+This decision simplified the entire gameplay-engineering architecture.
+
+---
+
+# VFX Architecture
+
+The effects layer is intentionally modular.
+
+```txt
 effects/
-├── DashTrail.jsx       ← Ghost copies fading behind the player
-├── ExplosionEffect.jsx ← Particle burst on projectile impact
-├── FinisherFlash.jsx   ← Full-screen white flash on finisher
-├── HitStop.jsx         ← Time-scale manipulator (freezes world)
-├── ScreenShake.jsx     ← Trauma-based camera displacement
-└── Shockwave.jsx       ← Expanding ring mesh on heavy impacts
+├── HitStop.jsx
+├── ScreenShake.jsx
+├── DashTrail.jsx
+├── ExplosionEffect.jsx
+├── Shockwave.jsx
+└── FinisherFlash.jsx
 ```
 
-### Why Modular?
+Each effect:
 
-Each effect is independent because:
-- Effects can overlap (a finisher triggers flash + shockwave + hitstop simultaneously)
-- Each can be tuned independently without breaking others
-- They're composable — new effects = new file, no refactor
+* owns its own lifecycle
+* updates independently
+* destroys itself automatically
+* reacts to gameplay events
 
-### `HitStop.jsx` — The Most Important Effect
+This architecture enables effect composition.
 
-Hit-stop is a technique from classic fighting games (Street Fighter, Tekken). When a hit lands, the entire scene stops updating for 2–5 frames. The player's brain registers this as "impact weight."
+Example:
 
-```jsx
-// HitStop.jsx
-useFrame(() => {
-  if (hitStopFrames > 0) {
-    // Pause all enemy animations, projectile movement
-    worldRef.current.timeScale = 0;
-    hitStopFrames--;
-  } else {
-    worldRef.current.timeScale = 1;
-  }
-});
+```txt
+Heavy Finisher
+    ↓
+Trigger:
+    - HitStop
+    - Shockwave
+    - Bloom Pulse
+    - Screen Flash
+    - Camera Trauma
+    - Audio Spike
 ```
 
-### `ScreenShake.jsx` — Trauma System
+No single monolithic effect controller is required.
 
-Rather than simple random shake, this uses a **trauma accumulator**:
-
-```js
-// Add trauma on events
-traumaRef.current = Math.min(1, traumaRef.current + amount);
-
-// Each frame, decay trauma and apply displacement
-useFrame(() => {
-  trauma = Math.max(0, trauma - DECAY_RATE);
-  const shake = trauma * trauma; // quadratic — feels more natural
-  camera.position.x += shake * (Math.random() - 0.5) * MAX_SHAKE;
-  camera.position.y += shake * (Math.random() - 0.5) * MAX_SHAKE;
-});
-```
-
-Heavy hits add 0.6 trauma. Light hits add 0.2. The shake naturally decays — no abrupt cutoff.
-
-### `DashTrail.jsx`
-
-On dash, 4–6 ghost meshes spawn at the previous player positions with decreasing opacity:
-
-```jsx
-// Ghost copies fade from 0.6 → 0 opacity over 200ms
-{ghosts.map((ghost, i) => (
-  <mesh key={i} position={ghost.pos} opacity={ghost.opacity}>
-    <clonedPlayerGeometry />
-    <meshBasicMaterial color="cyan" transparent opacity={ghost.opacity} />
-  </mesh>
-))}
-```
+Effects remain loosely coupled and highly tunable.
 
 ---
 
-## Camera + Lock-On System
+# Hit-Stop Implementation
 
-The camera lives in **`src/components/camera/ThirdPersonCamera.jsx`**.
+Hit-stop is one of the defining combat systems.
 
-### Default: Third-Person Follow
-
-The camera follows the player with **spring damping** — it lags slightly behind, which feels natural during fast movement:
-
-```js
-// Exponential lerp — faster when far, slower when close
-camera.position.lerp(targetPosition, 1 - Math.exp(-SPRING_STRENGTH * delta));
-camera.lookAt(player.position);
+```txt
+Attack Connects
+      ↓
+Global Time Scale → 0
+      ↓
+Freeze World For 2–4 Frames
+      ↓
+Resume Simulation
 ```
 
-### Lock-On Mode
+This micro-freeze dramatically increases perceived impact.
 
-When the player activates lock-on (Tab / Lock button):
-1. The nearest enemy within `LOCK_ON_RADIUS` is selected
-2. Camera pivots to frame both player and enemy
-3. A targeting reticle appears on the enemy in the HUD
-4. All attacks auto-orient toward the locked target
+The effect manipulates:
 
-```js
-// ThirdPersonCamera.jsx — lock-on pivot
-if (lockOnTarget) {
-  const midpoint = player.position.clone().lerp(lockOnTarget.position, 0.4);
-  camera.position.set(midpoint.x, midpoint.y + 4, midpoint.z + 8);
-  camera.lookAt(midpoint);
-}
-```
+* enemy movement
+* projectile simulation
+* animation progression
+* gameplay update flow
+
+while preserving camera readability.
+
+This technique originates from classic arcade fighting games.
+
+It remains one of the most effective combat feel tools ever created.
 
 ---
 
-## Mobile Controls System
+# Wave Spawning Pipeline
 
-Mobile controls live in **`src/components/ui/MobileControls.jsx`** and are rendered as a **React DOM overlay** — completely separate from the Three.js canvas.
-
-This is an important architectural decision: **UI is not in the 3D scene.** It floats above it as standard HTML.
-
-### Virtual Joystick
-
-The left joystick captures touch start/move/end events and converts them to a normalized direction vector:
-
-```js
-const handleTouchMove = (e) => {
-  const dx = e.touches[0].clientX - joystickOrigin.x;
-  const dy = e.touches[0].clientY - joystickOrigin.y;
-  const angle = Math.atan2(dy, dx);
-  const dist  = Math.min(Math.hypot(dx, dy), MAX_RADIUS);
-
-  moveDirection.set(
-    Math.cos(angle) * (dist / MAX_RADIUS),
-    Math.sin(angle) * (dist / MAX_RADIUS)
-  );
-};
-```
-
-
-### Device Detection (`src/utils/device.js`)
-
-Controls are conditionally rendered based on device detection:
-
-```js
-export const isMobile = () =>
-  /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-  (navigator.maxTouchPoints > 1);
-```
----
-
-## Android Deployment
-
-The game exports to Android using **Capacitor** — it wraps the web build into a native WebView APK.
-
-
-### Performance Notes for Android
-
-- **Target API 33+** (Android 13) for best WebGL support
-- Enable **hardware acceleration** in `AndroidManifest.xml`
-- Use **`lowPowerMode`** in Three.js renderer on battery-saving devices
-- Disable post-processing bloom on devices with < 4GB RAM
-
-```js
-// device.js — conditional quality
-export const qualityTier = () => {
-  const mem = navigator.deviceMemory || 4;
-  if (mem <= 2) return 'low';
-  if (mem <= 4) return 'medium';
-  return 'high';
-};
-```
-
----
-
-## Repo Architecture Explained
-
-```
-src/
-│
-├── audio/
-│   └── sounds.js              ← All sound effect definitions + BGM loader
-│
-├── components/
-│   │
-│   ├── camera/
-│   │   └── ThirdPersonCamera.jsx   ← Follow cam + lock-on logic
-│   │
-│   ├── characters/
-│   │   ├── Fighter.jsx         ← Player: movement, attacks, state machine
-│   │   └── Enemy.jsx           ← Enemy: FSM AI, health, projectile firing
-│   │
-│   ├── combat/
-│   │   ├── EnergyBlast.jsx     ← Player projectile (travel + collision)
-│   │   └── EnemyProjectile.jsx ← Enemy projectile (different speed/damage)
-│   │
-│   ├── effects/
-│   │   ├── DashTrail.jsx       ← Ghost trail on dash
-│   │   ├── ExplosionEffect.jsx ← Particle burst on impact
-│   │   ├── FinisherFlash.jsx   ← Full-screen white flash
-│   │   ├── HitStop.jsx         ← Time freeze on heavy hits
-│   │   ├── ScreenShake.jsx     ← Trauma-based camera shake
-│   │   └── Shockwave.jsx       ← Expanding ring mesh
-│   │
-│   ├── environment/
-│   │   ├── Arena.jsx           ← Floor, walls, boundary colliders
-│   │   ├── Lighting.jsx        ← Colored point lights + ambient
-│   │   └── NeonArena.jsx       ← Neon trim geometry + emissive materials
-│   │
-│   └── ui/
-│       ├── GameOver.jsx        ← Game over screen + score
-│       ├── HUD.jsx             ← Health bar, energy bar, wave counter
-│       ├── MainMenu.jsx        ← Title screen + start button
-│       ├── MobileControls.jsx  ← Virtual joystick + touch buttons
-│       └── PauseMenu.jsx       ← Pause overlay + resume/quit
-│
-├── game/
-│   └── controls.js             ← Input abstraction (keyboard + touch)
-│
-├── scenes/
-│   └── FightScene.jsx          ← Master orchestrator: spawning, waves, game state
-│
-├── utils/
-│   └── device.js               ← Device detection + quality tier selection
-│
-├── App.jsx                     ← Route between menu / game / gameover
-└── main.jsx                    ← Vite entry point, React root mount
-```
-
----
-
-Characters and combat are **separated intentionally**.
-
-`Fighter.jsx` knows: "I am the player. I can move, I can attack, I have health."  
-`EnergyBlast.jsx` knows: "I am a projectile. I travel, I collide, I disappear."
-
-If you put projectile logic inside `Fighter.jsx`, it becomes a 600-line monster. Separating them means each file does exactly one thing. Want to add a new projectile type? New file in `combat/`. Fighter doesn't change.
-
-### `effects/` are isolated for composability
-
-VFX effects are the most frequently changed, tuned, and replaced systems in any game. Isolating each one means:
-- Tune `ScreenShake.jsx` without touching anything else
-- Replace `ExplosionEffect.jsx` with a particle version later
-- Stack multiple effects simultaneously (finisher = flash + shockwave + hitstop)
-
-### `scenes/` orchestrates, doesn't implement
-
-`FightScene.jsx` is the **director**, not an actor. It manages:
-- Which wave is active
-- When to spawn enemies
-- When the boss appears
-- Game state transitions (playing → gameover)
-
-It imports everything else but implements almost nothing itself. This is intentional — it's the "glue layer."
-
-### `ui/` is React DOM, not Three.js
-
-All UI (HUD, menus, mobile controls) is standard HTML/CSS rendered over the canvas. This means:
-- UI is accessible (screen readers, contrast)
-- UI uses CSS animations (no Three.js overhead)
-- UI can be styled with normal tools (Tailwind, CSS modules)
-
----
-
-## Rendering Pipeline
-
-```
-React Three Fiber Canvas
-    │
-    ├── Scene
-    │   ├── Lighting.jsx      (point lights, ambient, directional)
-    │   ├── NeonArena.jsx      (emissive geometry — glows without post-processing)
-    │   ├── Arena.jsx          (collision boundaries, floor)
-    │   ├── Fighter.jsx        (player mesh + attack colliders)
-    │   ├── Enemy.jsx × N      (enemy meshes, N = current wave count)
-    │   ├── EnergyBlast.jsx × M (active projectiles)
-    │   └── effects/           (active VFX components)
-    │
-    └── EffectComposer (post-processing)
-        ├── Bloom              (threshold: 0.8, intensity: 1.2)
-        ├── ChromaticAberration (offset on hit events)
-        └── Vignette           (darkness: 0.5, offset: 0.2)
-```
-
-### Frame Lifecycle
-
-Every frame (60fps target):
-
-1. `useFrame` callbacks fire across all components
-2. Input is read from `controls.js` state
-3. Fighter position updates, attack spheres recalculate
-4. Enemy FSMs tick, projectiles move
-5. Collision checks run
-6. VFX components update (shake, trail, particles)
-7. Three.js renders the scene
-8. Post-processing stack runs on the framebuffer
-9. React DOM HUD renders over canvas
-
----
-
-## Performance Optimizations
-
-Running 3D in a browser (especially mobile) demands aggressive optimization.
-
-### Object Pooling
-
-Projectiles and explosion particles are pooled — created once, reused forever:
-
-```js
-// EnergyBlast.jsx — don't create/destroy, reuse
-const pool = useRef([]);
-const getBlast = () => pool.current.find(b => !b.active) || createNewBlast();
-const releaseBlast = (blast) => { blast.active = false; };
-```
-
-### Geometry Instancing
-
-When many enemies share the same shape, `InstancedMesh` renders all of them in a single draw call:
-
-```jsx
-// Enemy.jsx — instanced rendering
-<instancedMesh ref={instancedRef} args={[geometry, material, MAX_ENEMIES]}>
-  {/* Positions updated via instancedRef.current.setMatrixAt() */}
-</instancedMesh>
-```
-
-Without instancing: N enemies = N draw calls. With instancing: N enemies = 1 draw call.
-
-### LOD (Level of Detail)
-
-```js
-// High detail: < 15 units from camera
-// Low detail:  > 15 units from camera
-// Culled:      > 50 units from camera
-```
-
-Implemented via R3F's `<Lod>` component.
-
-### Shadow Budget
-
-Shadows are disabled by default. On high-tier devices, one directional shadow is enabled with a low shadow map resolution (512×512).
-
----
-
-## How Waves & Bosses Work
-
-Wave logic lives in **`FightScene.jsx`**.
-
-### Wave Config
+The wave system is entirely data-driven.
 
 ```js
 const WAVES = [
   {
-    id: 1,
     enemies: [
-      { type: 'basic',  count: 3, spawnDelay: 500  },
-    ],
-    bossWave: false,
-  },
-  {
-    id: 2,
-    enemies: [
-      { type: 'basic',  count: 2, spawnDelay: 300  },
-      { type: 'ranged', count: 2, spawnDelay: 1000 },
-    ],
-    bossWave: false,
-  },
-  {
-    id: 3,
-    enemies: [
-      { type: 'shield', count: 3, spawnDelay: 400  },
-      { type: 'ranged', count: 2, spawnDelay: 800  },
-    ],
-    bossWave: false,
-  },
-  {
-    id: 4,
-    enemies: [],
-    bossWave: true,
-    boss: { type: 'raone', hp: 500, rageThreshold: 0.4 },
-  },
-];
-```
-
-### Wave Transition
-
-```js
-// FightScene.jsx
-const onEnemyDefeated = () => {
-  aliveCount--;
-  if (aliveCount <= 0) {
-    setTimeout(() => {
-      currentWave++;
-      spawnWave(WAVES[currentWave]);
-      showWaveAnnouncement(currentWave);
-    }, WAVE_TRANSITION_DELAY);
+      { type: 'basic', count: 3 },
+      { type: 'ranged', count: 2 }
+    ]
   }
-};
+]
 ```
 
-### Ra.One Entry
+FightScene.jsx acts as an orchestrator.
 
-Ra.One spawns with a cinematic: camera pulls back, screen flashes, boss drops from above the arena. The `FinisherFlash.jsx` component is reused for the spawn flash.
+Not an implementation layer.
+
+Responsibilities:
+
+* wave progression
+* enemy spawning
+* encounter timing
+* transition pacing
+* boss injection
+* game-state routing
+
+This architecture allows combat tuning entirely through configuration.
+
+No core gameplay logic requires rewriting when encounter design changes.
 
 ---
 
-## Audio System
+# ScriptableObject-Inspired Data Design
 
-Audio lives in **`src/audio/sounds.js`**.
+Enemy archetypes and wave definitions follow a data-oriented approach inspired by Unity ScriptableObjects.
 
-The system uses **Howler.js** for sound management:
+Instead of embedding combat constants directly into gameplay code:
 
 ```js
-// sounds.js
-import { Howl, Howler } from 'howler';
-
-export const SFX = {
-  hit:         new Howl({ src: ['sfx/hit.mp3'],      volume: 0.8 }),
-  blast:       new Howl({ src: ['sfx/blast.mp3'],    volume: 0.6 }),
-  dash:        new Howl({ src: ['sfx/dash.mp3'],     volume: 0.5 }),
-  explosion:   new Howl({ src: ['sfx/explosion.mp3'], volume: 0.9 }),
-  finisher:    new Howl({ src: ['sfx/finisher.mp3'], volume: 1.0 }),
-  bossRage:    new Howl({ src: ['sfx/rage.mp3'],     volume: 1.0 }),
-};
-
-export const BGM = new Howl({
-  src: ['music/arena_theme.mp3'],
-  loop: true,
-  volume: 0.4,
-});
+{
+  type: 'shield',
+  hp: 180,
+  moveSpeed: 0.8,
+  projectileCooldown: 1.2,
+  staggerResistance: 0.5
+}
 ```
 
-Sound effects are triggered directly from component events — no global bus needed for a project of this scale.
+This enables:
+
+* faster balancing
+* easier enemy iteration
+* reusable archetypes
+* configurable encounters
+
+The architecture separates:
+
+```txt
+Behavior Logic
+        FROM
+Gameplay Data
+```
+
+This is critical for scalability.
 
 ---
 
-## Animation Pipeline
+# Combat Ranking System
 
-Currently, character animations are **procedural** — built from code, not pre-made animation files. This was a deliberate early choice: no asset dependencies, no rigging, instant iteration.
+The scoring/ranking layer is designed around combat expression.
 
-### Procedural Animations
+Ranking factors include:
 
-```js
-// Fighter.jsx — attack animation (procedural)
-useFrame(({ clock }) => {
-  if (isAttacking) {
-    const t = clock.getElapsedTime() - attackStart;
-    armRef.current.rotation.x = Math.sin(t * 20) * 0.8; // swing
-    if (t > ATTACK_DURATION) setAttacking(false);
-  }
-});
+* damage efficiency
+* combo continuity
+* hit consistency
+* survival time
+* finisher usage
+* dodge timing
+
+Future extensions can integrate:
+
+* style multipliers
+* no-hit bonuses
+* aggression scaling
+* crowd-control weighting
+
+The ranking system intentionally rewards:
+
+> aggressive controlled combat.
+
+Not passive survival.
+
+---
+
+# Optimizing for Android Without Killing Visual Style
+
+Running mobile GPU combat systems inside Android WebViews introduces major constraints.
+
+The optimization layer was built specifically around:
+
+* thermal throttling
+* GPU memory limits
+* inconsistent refresh rates
+* shader compilation spikes
+* battery drain
+
+The project dynamically scales:
+
+```txt
+Device Tier Detection
+      ↓
+Quality Profile Selection
+      ↓
+Renderer Adjustment
 ```
 
-##  How the Models Are Loaded
+Possible runtime adjustments:
 
-Models use R3F's `useGLTF` hook with **Draco compression** for mobile:
+* bloom reduction
+* shadow disable
+* post-processing downgrade
+* particle count reduction
+* texture resolution reduction
 
-```jsx
-import { useGLTF } from '@react-three/drei';
+---
 
-// Draco-compressed GLB — ~70% smaller file size
-const Fighter = () => {
-  const { scene } = useGLTF('/models/fighter.glb', true); // true = Draco
-  return <primitive object={scene} />;
-};
+# The Reality of Mobile Rendering Constraints
 
-// Preload for zero loading screen
-useGLTF.preload('/models/fighter.glb');
+Mobile mobile GPU is extremely sensitive to:
+
+* overdraw
+* transparent materials
+* fill rate
+* fragment shader cost
+* framebuffer bandwidth
+
+The project intentionally avoids:
+
+* expensive real-time shadows
+* high-poly environments
+* physically based realism pipelines
+* unnecessary transparency layers
+
+Instead it leans on:
+
+* emissive tricks
+* contrast lighting
+* bloom amplification
+* simplified geometry
+* stylized rendering
+
+This preserves combat readability while maintaining stable framerate.
+
+---
+
+# Memory Management and Runtime Stability
+
+Memory stability was treated as a first-class concern.
+
+The architecture aggressively minimizes:
+
+* runtime allocation
+* object churn
+* temporary geometry creation
+* shader recompilation
+
+Strategies include:
+
+## Object Pooling
+
+Reuse instead of recreate.
+
+## GLTF Preloading
+
+Prevent runtime loading stalls.
+
+## Shared Materials
+
+Reduce GPU memory duplication.
+
+## Instanced Rendering
+
+Reduce draw calls.
+
+## Controlled Post-Processing
+
+Avoid framebuffer explosion on weaker devices.
+
+---
+
+# Performance Optimization Strategies
+
+## Instanced Rendering
+
+Enemies sharing geometry are rendered using InstancedMesh.
+
+```txt
+Without Instancing:
+10 Enemies = 10 Draw Calls
+
+With Instancing:
+10 Enemies = 1 Draw Call
 ```
 
-# Made by C.Kumaran
+## Level of Detail
 
-</div>
+```txt
+Near Camera   → High Detail
+Mid Distance  → Simplified Mesh
+Far Distance  → Culled
+```
+
+## Shadow Budgeting
+
+Only a single low-resolution directional shadow is enabled on high-tier devices.
+
+## Conditional Effects
+
+Post-processing scales dynamically based on device capability.
+
+---
+
+# Scene Orchestration and System Ownership
+
+FightScene.jsx behaves like a director.
+
+Not a gameplay implementation blob.
+
+Responsibilities:
+
+```txt
+Wave Management
+Boss Timing
+State Routing
+Encounter Flow
+Victory Conditions
+UI Transitioning
+```
+
+The scene layer imports systems.
+
+It does not own their logic.
+
+This keeps orchestration clean and maintainable.
+
+---
+
+# Project Structure and Engine Organization
+
+```txt
+ScriptableObjects/
+├── AttackData.cs
+├── EnemyData.cs
+└── WaveData.cs
+
+Scripts/
+├── Audio/
+│   └── AudioManager.cs
+│
+├── Camera/
+│   ├── CameraShake.cs
+│   ├── LockOnCamera.cs
+│   └── ThirdPersonCamera.cs
+│
+├── Combat/
+│   ├── AdvancedComboSystem.cs
+│   ├── AirComboManager.cs
+│   ├── AirLaunch.cs
+│   ├── BlastAttack.cs
+│   ├── BlockSystem.cs
+│   ├── CombatController.cs
+│   ├── CombatFinisherCamera.cs
+│   ├── CombatRankSystem.cs
+│   ├── ComboSystem.cs
+│   ├── CounterAttack.cs
+│   ├── DamageData.cs
+│   ├── EnemyProjectile.cs
+│   ├── EnemyStagger.cs
+│   ├── FinisherSystem.cs
+│   ├── HeavyAttack.cs
+│   ├── HitUnityionController.cs
+│   ├── HitStop.cs
+│   ├── IDamageable.cs
+│   ├── LockOnSystem.cs
+│   ├── ParrySystem.cs
+│   ├── PerfectDodge.cs
+│   └── Projectile.cs
+│
+├── Core/
+│   ├── APKBuilder.cs
+│   ├── AchievementSystem.cs
+│   ├── AdaptiveQuality.cs
+│   ├── AndroidHaptics.cs
+│   ├── AsyncSceneLoader.cs
+│   ├── BootManager.cs
+│   ├── BossAI.cs
+│   ├── BossHealthBar.cs
+│   ├── BossIntro.cs
+│   ├── CheckpointSystem.cs
+│   ├── ControllerSupport.cs
+│   ├── CurrencySystem.cs
+│   ├── DailyRewardSystem.cs
+│   ├── DialogueSystem.cs
+│   ├── EventManager.cs
+│   ├── GameManager.cs
+│   ├── GameOverManager.cs
+│   ├── InputManager.cs
+│   ├── LODManager.cs
+│   ├── LeaderboardSystem.cs
+│   ├── LoadingScreen.cs
+│   ├── MainMenuManager.cs
+│   ├── MemoryCleanup.cs
+│   ├── ObjectPoolManager.cs
+│   ├── PerformanceManager.cs
+│   ├── QuestSystem.cs
+│   ├── ResolutionManager.cs
+│   ├── SaveSystem.cs
+│   ├── SceneLoader.cs
+│   ├── ServiceLocator.cs
+│   ├── SkillTree.cs
+│   ├── SlowMotion.cs
+│   ├── StatsTracker.cs
+│   ├── WaveManager.cs
+│   └── XPSystem.cs
+│
+├── Enemy/
+│   ├── AttackState.cs
+│   ├── BaseState.cs
+│   ├── BossProjectileAttack.cs
+│   ├── ChaseState.cs
+│   ├── EnemyAI.cs
+│   ├── EnemyArmorSystem.cs
+│   ├── EnemyDodgeAI.cs
+│   ├── EnemySpawner.cs
+│   ├── EnemyStateMachine.cs
+│   ├── IdleState.cs
+│   └── RangedEnemyAI.cs
+│
+├── Player/
+│   ├── PlayerController.cs
+│   └── PlayerStats.cs
+│
+├── UI/
+│   ├── AnimatedMainMenu.cs
+│   ├── CharacterSelection.cs
+│   ├── ComboCounterUI.cs
+│   ├── DamageFlashUI.cs
+│   ├── FPSCounter.cs
+│   ├── HUDAnimator.cs
+│   ├── HUDController.cs
+│   ├── MobileControls.cs
+│   ├── PauseMenu.cs
+│   ├── SettingsMenu.cs
+│   ├── ShopMenu.cs
+│   ├── VirtualJoystick.cs
+│   └── WaveAnnouncement.cs
+│
+├── VFX/
+│   ├── DamagePopup.cs
+│   ├── DashTrail.cs
+│   ├── EnemyFlash.cs
+│   ├── EnergyExplosion.cs
+│   ├── EnergyTrail.cs
+│   ├── FinisherFlash.cs
+│   ├── GPUParticleExplosion.cs
+│   ├── ImpactSpark.cs
+│   ├── NeonArenaGenerator.cs
+│   └── Shockwave.cs
+│
+├── ScreenShots/
+└── README.md
+```
+
+The folder structure intentionally mirrors engine-style separation.
+
+Each domain owns exactly one responsibility.
+
+---
+
+# Why Aggressive Separation of Concerns Matters
+
+One of the core architectural rules of the project:
+
+> systems should know as little about each other as possible.
+
+Examples:
+
+## Fighter.jsx
+
+Knows:
+
+* movement
+* attack timing
+* state transitions
+* health
+
+Does NOT know:
+
+* camera shake
+* UI rendering
+* bloom intensity
+* audio mixing
+
+## EnergyBlast.jsx
+
+Knows:
+
+* movement
+* collision
+* despawn timing
+
+Does NOT know:
+
+* wave progression
+* score systems
+* HUD state
+
+This drastically improves maintainability.
+
+---
+
+# Audio Feedback and Combat Timing
+
+Audio feedback is synchronized tightly with gameplay timing.
+
+The system uses:
+
+* layered hit sounds
+* impact spikes
+* dash audio cues
+* finisher emphasis
+* boss rage transitions
+
+Audio events trigger directly from gameplay events.
+
+The sound layer intentionally exaggerates attack impact timing.
+
+---
+
+# Procedural Animation Instead of Heavy Animation Pipelines
+
+The project currently relies primarily on procedural animation logic.
+
+This was intentional.
+
+Advantages:
+
+* rapid iteration
+* no dependency on external rigs
+* gameplay-first tuning
+* low asset overhead
+
+Combat timing could be adjusted instantly through code.
+
+This accelerated combat iteration significantly during development.
+
+---
+
+# Systems I Designed the Architecture Around
+
+Potential future systems:
+
+* combo cancel trees
+* animation blending graphs
+* deterministic rollback multiplayer
+* ECS-style enemy batching
+* advanced projectile scripting
+* dynamic arena hazards
+* cinematic finishers
+* replay systems
+* GPU particle simulation
+
+The current architecture was intentionally designed to allow these systems to slot in incrementally.
+
+---
+
+# Closing Thoughts
+
+G.ONE is ultimately less about building a content-heavy game and more about engineering a responsive combat framework inside a browser runtime.
+
+The project explores:
+
+* modular gameplay architecture
+* reactive rendering systems
+* lightweight combat simulation
+* mobile mobile GPU optimization
+* stylized rendering pipelines
+* combat feel engineering
+
+Every major system was designed with:
+
+* scalability
+* separation
+* readability
+* iteration speed
+* performance stability
+
+in mind.
+
+The end result is a mobile-ready combat game that behaves much closer to a lightweight action-engine prototype than a typical gameplay-engineering experiment.
+
+---
+
+Built by C.Kumaran
