@@ -95,6 +95,10 @@ The goal was to engineer a reusable combat foundation.
 
 ---
 
+# Opening Sequence
+
+![Start Screen](./ScreenShots/Start.png)
+
 # Gameplay Overview
 
 Each wave escalates combat pressure through enemy composition, attack density, movement aggression, and spatial control.
@@ -148,6 +152,10 @@ Instead of increasing raw HP only, the boss alters:
 This creates perceived escalation without requiring massive content volume.
 
 ---
+
+# Main Menu
+
+![Main Menu](./ScreenShots/MainG.One.png)
 
 # The Arena
 
@@ -261,6 +269,10 @@ Everything else is reactive.
 | Pause        | Pause Button         | Esc               |
 
 ---
+
+# Combat Gameplay
+
+![Combat](./ScreenShots/Action.png)
 
 # Combat Feel Philosophy
 
@@ -1263,31 +1275,11 @@ The current architecture was intentionally designed to allow these systems to sl
 
 ---
 
-# Closing Thoughts
+# ScreenShots
 
-G.ONE is ultimately less about building a content-heavy game and more about engineering a responsive combat framework inside a browser runtime.
-
-The project explores:
-
-* modular gameplay architecture
-* reactive rendering systems
-* lightweight combat simulation
-* mobile mobile GPU optimization
-* stylized rendering pipelines
-* combat feel engineering
-
-Every major system was designed with:
-
-* scalability
-* separation
-* readability
-* iteration speed
-* performance stability
-
-in mind.
-
-The end result is a mobile-ready combat game that behaves much closer to a lightweight action-engine prototype than a typical gameplay-engineering experiment.
-
+./ScreenShots/MainG.One.png
+./ScreenShots/Action.png
+./ScreenShots/Start.png
 ---
 
 Built by C.Kumaran
